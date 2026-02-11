@@ -1,0 +1,45 @@
+[package]
+name = "soldrip_automation"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Для роботи з Excel (XLSX)
+rust_xlsxwriter = { git = "https://github.com/jmcnamara/rust_xlsxwriter", branch = "main" }
+calamine = "0.28"
+serde = { version = "1.0", features = ["derive"] }
+
+# HTTP клієнт для API запитів (rustls - без OpenSSL!)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+tokio = { version = "1.35", features = ["full"] }
+
+# Криптографія для Solana гаманців (БЕЗ solana-sdk!)
+ed25519-dalek = "2.1"
+rand = "0.8"
+
+# Утиліти
+anyhow = "1.0"
+colored = "2.1"
+
+# Криптографія для fingerprint
+sha2 = "0.10"
+hex = "0.4"
+
+# Для роботи з часом
+chrono = "0.4"
+
+# Для прогрес-бару
+indicatif = "0.17"
+
+# Для логування
+env_logger = "0.11"
+log = "0.4"
+
+# Base58 encoding/decoding
+bs58 = "0.5"
+
+# JSON serialization
+serde_json = "1.0"
+
+# Для .env файлів
+dotenv = "0.15"

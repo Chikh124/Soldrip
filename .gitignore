@@ -1,0 +1,26 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# Environment variables (ВАЖЛИВО!)
+.env
+
+# Wallets file (ПРИВАТНІ КЛЮЧІ!)
+wallets.xlsx
+wallets.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

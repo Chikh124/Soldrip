@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo init:*)",
+      "Bash(rustc:*)",
+      "Bash(chmod:*)",
+      "WebFetch(domain:soldrip.io)",
+      "Bash(ls:*)",
+      "Bash(cargo clean:*)",
+      "Bash(git init:*)",
+      "Bash(.gitignore << 'EOF'\n# Rust\n/target/\n**/*.rs.bk\n*.pdb\nCargo.lock\n\n# Environment variables \\(ВАЖЛИВО!\\)\n.env\n\n# Wallets file \\(ПРИВАТНІ КЛЮЧІ!\\)\nwallets.xlsx\nwallets.csv\n\n# IDE\n.vscode/\n.idea/\n*.swp\n*.swo\n*~\n\n# OS\n.DS_Store\nThumbs.db\n\n# Logs\n*.log\nEOF)",
+      "Bash(git add:*)"
+    ]
+  }
+}

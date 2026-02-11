@@ -1,0 +1,4 @@
+address,private_key,status,balance,created_at,last_claim
+ExampleAddr1...,ExamplePrivKey1...,pending,0.0,2024-02-11T12:00:00Z,
+ExampleAddr2...,ExamplePrivKey2...,connected,0.145,2024-02-11T12:00:00Z,2024-02-11T12:30:00Z
+ExampleAddr3...,ExamplePrivKey3...,connected,0.289,2024-02-11T12:00:00Z,2024-02-11T13:00:00Z
