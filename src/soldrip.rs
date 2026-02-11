@@ -135,6 +135,7 @@ pub async fn claim_with_captcha(wallet: &Wallet, captcha_token: &str) -> Result<
 
     info!("  📝 Nonce: {}", &nonce[..20]);
     info!("  ✍️  Signature: {}...", &signature[..20]);
+    info!("  🎫 Captcha token (перші 50): {}...", &captcha_token[..captcha_token.len().min(50)]);
 
     let response = client
         .post("https://soldrip.io/api/claim")

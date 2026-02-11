@@ -17,9 +17,9 @@ impl CaptchaConfig {
         let api_key = std::env::var("CAPTCHA_API_KEY")
             .map_err(|_| anyhow!("CAPTCHA_API_KEY не знайдено. Створіть файл .env"))?;
 
-        // Site key для soldrip.io (можна дізнатись з HTML коду сайту)
+        // Site key для soldrip.io (знайдено з Network запитів)
         let site_key = std::env::var("CAPTCHA_SITE_KEY")
-            .unwrap_or_else(|_| "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI".to_string()); // Тестовий ключ
+            .unwrap_or_else(|_| "6LeYdFcsAAAAACXSB7EiVlXm6Wp2F1bkESWKnhkg".to_string());
 
         Ok(Self { api_key, site_key })
     }
@@ -28,12 +28,13 @@ impl CaptchaConfig {
 /// Розв'язує reCAPTCHA v3 через 2Captcha
 pub async fn solve_captcha(config: &CaptchaConfig) -> Result<String> {
     info!("🤖 Надсилаємо капчу на розв'язання...");
+    info!("  🔑 Site Key: {}", config.site_key);
 
     let client = reqwest::Client::new();
 
-    // Крок 1: Надсилаємо капчу
+    // Крок 1: Надсилаємо капчу (reCAPTCHA v2, БЕЗ version/action/min_score!)
     let submit_url = format!(
-        "{}?key={}&method=userrecaptcha&googlekey={}&pageurl={}&version=v3&action=claim&min_score=0.3&json=1",
+        "{}?key={}&method=userrecaptcha&googlekey={}&pageurl={}&json=1",
         CAPTCHA_API_URL,
         config.api_key,
         config.site_key,
@@ -85,6 +86,7 @@ pub async fn solve_captcha(config: &CaptchaConfig) -> Result<String> {
                     .ok_or_else(|| anyhow!("No token in response"))?;
 
                 info!("✅ Капча розв'язана за {} секунд!", attempt * 5);
+                info!("  🎫 Token (перші 50 символів): {}...", &token[..token.len().min(50)]);
                 return Ok(token.to_string());
             }
             Some(0) => {
