@@ -195,6 +195,44 @@ pub async fn get_balance(wallet: &Wallet) -> Result<f64> {
     }
 }
 
+/// Структура для accumulation відповіді
+#[derive(Debug)]
+pub struct AccumulationStatus {
+    pub percentage: f64,
+    pub is_full: bool,
+}
+
+/// Перевіряє статус накопичення (accumulation) для гаманця
+pub async fn check_accumulation(wallet: &Wallet) -> Result<AccumulationStatus> {
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(format!("{}/api/user/accumulation", SOLDRIP_URL))
+        .header("accept", "*/*")
+        .header("x-wallet-address", &wallet.address)
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        let data: serde_json::Value = response.json().await?;
+
+        // Отримуємо відсоток накопичення
+        let percentage = data["percentage"]
+            .as_f64()
+            .or_else(|| data["percent"].as_f64())
+            .unwrap_or(0.0);
+
+        let is_full = percentage >= 100.0;
+
+        Ok(AccumulationStatus {
+            percentage,
+            is_full,
+        })
+    } else {
+        Err(anyhow!("Failed to check accumulation: HTTP {}", response.status()))
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

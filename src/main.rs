@@ -25,7 +25,8 @@ async fn main() -> Result<()> {
         println!("2. Підключити гаманці до SOLdrip");
         println!("3. Зробити claim для всіх гаманців");
         println!("4. Показати статистику");
-        println!("5. Вийти");
+        println!("5. 🔄 Автоматичний режим (Auto-Claim Loop)");
+        println!("6. Вийти");
         print!("\nВаш вибір: ");
         io::stdout().flush()?;
 
@@ -37,7 +38,8 @@ async fn main() -> Result<()> {
             "2" => connect_wallets().await?,
             "3" => claim_all().await?,
             "4" => show_stats().await?,
-            "5" => {
+            "5" => auto_claim_loop().await?,
+            "6" => {
                 println!("{}", "👋 До побачення!".bright_yellow());
                 break;
             }
@@ -249,6 +251,162 @@ async fn show_stats() -> Result<()> {
     }
 
     println!("{}", "=" .repeat(50));
+
+    Ok(())
+}
+
+async fn auto_claim_loop() -> Result<()> {
+    println!("\n{}", "🔄 Автоматичний режим Auto-Claim".bright_blue().bold());
+    println!("{}", "=" .repeat(50));
+    println!();
+    println!("Цей режим буде автоматично:");
+    println!("  • Перевіряти статус накопичення кожні 5 хвилин");
+    println!("  • Автоматично клеймити, коли досягне 100%");
+    println!("  • Працювати безперервно, поки не зупините (Ctrl+C)");
+    println!();
+
+    // Завантажуємо конфігурацію 2Captcha
+    let captcha_config = match captcha::CaptchaConfig::from_env() {
+        Ok(config) => {
+            match captcha::get_balance(&config.api_key).await {
+                Ok(balance) => {
+                    println!("💳 Баланс 2Captcha: ${:.2}", balance);
+                    if balance < 0.5 {
+                        println!("{}", "⚠️  УВАГА: Низький баланс! Поповніть на https://2captcha.com".yellow());
+                    }
+                }
+                Err(e) => {
+                    println!("{}", format!("⚠️  Не вдалось перевірити баланс: {}", e).yellow());
+                }
+            }
+            config
+        }
+        Err(e) => {
+            println!("{}", format!("❌ Помилка конфігурації 2Captcha: {}", e).red());
+            println!("{}", "💡 Створіть файл .env з CAPTCHA_API_KEY".yellow());
+            return Ok(());
+        }
+    };
+
+    println!();
+    print!("{}", "Натисніть Enter для запуску або Ctrl+C для відміни...".bright_yellow());
+    io::stdout().flush()?;
+    let mut _confirm = String::new();
+    io::stdin().read_line(&mut _confirm)?;
+
+    println!("\n{}", "✅ Автоматичний режим запущено!".bright_green().bold());
+    println!("{}", "⏱️  Інтервал перевірки: 5 хвилин".bright_white());
+    println!("{}", "🛑 Для зупинки натисніть Ctrl+C".bright_white());
+    println!("{}", "=" .repeat(50));
+
+    let check_interval = tokio::time::Duration::from_secs(5 * 60); // 5 хвилин
+    let mut iteration = 0;
+
+    loop {
+        iteration += 1;
+        let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+
+        println!("\n{}", format!("🔄 Ітерація #{} - {}", iteration, now).bright_cyan().bold());
+        println!("{}", "-".repeat(50));
+
+        // Завантажуємо підключені гаманці
+        let wallets = storage::load_wallets()?;
+        let connected: Vec<_> = wallets
+            .into_iter()
+            .filter(|w| w.status == "connected")
+            .collect();
+
+        if connected.is_empty() {
+            println!("{}", "⚠️  Немає підключених гаманців!".yellow());
+            println!("💡 Спочатку підключіть гаманці через опцію 2");
+            break;
+        }
+
+        println!("📊 Перевіряємо {} гаманців...", connected.len());
+
+        let mut ready_to_claim = Vec::new();
+
+        // Перевіряємо accumulation для кожного гаманця
+        for (idx, wallet) in connected.iter().enumerate() {
+            match soldrip::check_accumulation(wallet).await {
+                Ok(status) => {
+                    let addr_short = &wallet.address[..8];
+                    if status.is_full {
+                        println!("  ✅ {} - {:.1}% - ГОТОВО ДО CLAIM!", addr_short, status.percentage);
+                        ready_to_claim.push(wallet.clone());
+                    } else {
+                        println!("  ⏳ {} - {:.1}%", addr_short, status.percentage);
+                    }
+                }
+                Err(e) => {
+                    log::error!("Failed to check accumulation for {}: {}", wallet.address, e);
+                    println!("  ❌ {} - помилка перевірки", &wallet.address[..8]);
+                }
+            }
+
+            // Невелика затримка між перевірками
+            if idx < connected.len() - 1 {
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            }
+        }
+
+        // Якщо є готові до claim - виконуємо
+        if !ready_to_claim.is_empty() {
+            println!("\n{}", format!("💰 Знайдено {} гаманців готових до claim!", ready_to_claim.len()).bright_green().bold());
+
+            let mut successful = 0;
+            let mut failed = 0;
+            let mut total_claimed = 0.0;
+
+            for wallet in ready_to_claim {
+                println!("\n🤖 Обробляю {}...", &wallet.address[..12]);
+
+                // Розв'язуємо капчу
+                let captcha_token = match captcha::solve_captcha(&captcha_config).await {
+                    Ok(token) => token,
+                    Err(e) => {
+                        log::error!("Captcha failed for {}: {}", wallet.address, e);
+                        println!("  ❌ Не вдалося розв'язати капчу: {}", e);
+                        failed += 1;
+                        continue;
+                    }
+                };
+
+                // Виконуємо claim
+                match soldrip::claim_with_captcha(&wallet, &captcha_token).await {
+                    Ok(amount) => {
+                        total_claimed += amount;
+                        successful += 1;
+                        storage::update_wallet_balance(&wallet.address, amount)?;
+                        println!("  ✅ Успішно claimed {} SOL", amount);
+                    }
+                    Err(e) => {
+                        failed += 1;
+                        log::error!("Claim failed for {}: {}", wallet.address, e);
+                        println!("  ❌ Помилка: {}", e);
+                    }
+                }
+
+                // Затримка між claims
+                tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+            }
+
+            println!("\n{}", "📊 Підсумок claim:".bright_cyan().bold());
+            println!("   ✅ Успішно: {}", successful);
+            println!("   ❌ Помилок: {}", failed);
+            println!("   💰 Зібрано: {:.4} SOL", total_claimed);
+        } else {
+            println!("\n{}", "⏳ Жоден гаманець не готовий до claim".yellow());
+        }
+
+        // Чекаємо до наступної перевірки
+        println!("\n{}", format!("😴 Чекаю {} хвилин до наступної перевірки...", check_interval.as_secs() / 60).bright_white());
+        println!("{}", format!("   Наступна перевірка: {}",
+            (chrono::Local::now() + chrono::Duration::seconds(check_interval.as_secs() as i64))
+                .format("%H:%M:%S")).bright_white());
+
+        tokio::time::sleep(check_interval).await;
+    }
 
     Ok(())
 }

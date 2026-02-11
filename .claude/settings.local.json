@@ -14,7 +14,9 @@
       "Bash(git branch:*)",
       "Bash(git remote add:*)",
       "Bash(git push:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix reCAPTCHA v2 integration for soldrip.io\n\n- Changed from reCAPTCHA v3 to v2 \\(removed version/action/min_score params\\)\n- Updated site key to real soldrip.io key: 6LeYdFcsAAAAACXSB7EiVlXm6Wp2F1bkESWKnhkg\n- Added detailed logging for captcha token and site key\n- Fixed \"Invalid captcha\" error - now working correctly\n\nTested: Manual claim successful, automatic captcha solving works\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix reCAPTCHA v2 integration for soldrip.io\n\n- Changed from reCAPTCHA v3 to v2 \\(removed version/action/min_score params\\)\n- Updated site key to real soldrip.io key: 6LeYdFcsAAAAACXSB7EiVlXm6Wp2F1bkESWKnhkg\n- Added detailed logging for captcha token and site key\n- Fixed \"Invalid captcha\" error - now working correctly\n\nTested: Manual claim successful, automatic captcha solving works\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(cargo build:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
